@@ -13,6 +13,7 @@ from . import ads, bidi, timestamps
 from .encoding import decode_bytes
 
 BLOCK_SPLIT_RE = re.compile(r"\n[ \t]*\n")
+ARROW_LIKE_RE = re.compile(r"-{1,3}\s*>")
 
 
 @dataclass
@@ -42,6 +43,8 @@ class FixResult:
     bidi_stripped: int = 0
     rtl_marked: int = 0
     sorted: bool = False
+    unparsed: int = 0
+    unparsed_at: List[int] = field(default_factory=list)
 
     @property
     def changed(self) -> bool:
@@ -97,14 +100,23 @@ class FileReport:
         }
 
 
-def parse_srt(text: str) -> List[Cue]:
-    """Parse SRT content into cues, tolerating missing indices and bad timing."""
+def _parse_blocks(text: str) -> tuple:
+    """Return ``(cues, line_numbers_of_unparsed_cue_blocks)``.
+
+    A block that contains an arrow but cannot be parsed is *not* silently dropped:
+    its approximate line number is reported so the caller can refuse to rewrite
+    the file instead of losing content.
+    """
     text = text.replace("\r\n", "\n").replace("\r", "\n").lstrip("\ufeff")
     cues: List[Cue] = []
+    broken: List[int] = []
+    line_number = 1
 
     for block in BLOCK_SPLIT_RE.split(text.strip("\n")):
         if not block.strip():
+            line_number += 1
             continue
+
         lines = block.split("\n")
 
         time_index = None
@@ -112,22 +124,37 @@ def parse_srt(text: str) -> List[Cue]:
             if "-->" in line:
                 time_index = index
                 break
+
         if time_index is None:
-            continue
+            # A line that looks like a timestamp but uses a broken arrow ("->").
+            for index, line in enumerate(lines[:3]):
+                if ARROW_LIKE_RE.search(line) and re.search(r"\d:\d", line):
+                    time_index = index
+                    break
 
-        match = timestamps.CUE_RE.match(lines[time_index].strip())
-        if match is None:
-            continue
+        cue = None
+        if time_index is not None:
+            match = timestamps.CUE_RE.match(lines[time_index].strip())
+            if match is not None:
+                parsed_start = timestamps.parse_time(match.group("a"))
+                parsed_end = timestamps.parse_time(match.group("b"))
+                if parsed_start is not None and parsed_end is not None:
+                    body = "\n".join(lines[time_index + 1 :]).strip("\n")
+                    cue = Cue(start=parsed_start[0], end=parsed_end[0], text=body)
 
-        parsed_start = timestamps.parse_time(match.group("a"))
-        parsed_end = timestamps.parse_time(match.group("b"))
-        if parsed_start is None or parsed_end is None:
-            continue
+        if cue is not None:
+            cues.append(cue)
+        elif time_index is not None:
+            broken.append(line_number)
 
-        body = "\n".join(lines[time_index + 1 :]).strip("\n")
-        cues.append(Cue(start=parsed_start[0], end=parsed_end[0], text=body))
+        line_number += len(lines) + 1
 
-    return cues
+    return cues, broken
+
+
+def parse_srt(text: str) -> List[Cue]:
+    """Parse SRT content into cues, tolerating missing indices and bad timing."""
+    return _parse_blocks(text)[0]
 
 
 def serialize_srt(cues: List[Cue]) -> str:
@@ -163,8 +190,10 @@ def _clean_lines(lines: List[str], opts: FixOptions, result: FixResult, at_edge:
 def fix_text(text: str, opts: Optional[FixOptions] = None) -> FixResult:
     """Apply every enabled fix to SRT *text* and return the new content."""
     opts = opts or FixOptions()
-    cues = parse_srt(text)
+    cues, broken = _parse_blocks(text)
     result = FixResult(cues_before=len(cues))
+    result.unparsed = len(broken)
+    result.unparsed_at = broken
     if not cues:
         return result
 
@@ -236,6 +265,12 @@ def process_file(
     if result.cues_after == 0:
         report.ok = False
         report.error = "every cue was removed, original kept"
+        return report
+    if result.unparsed:
+        report.ok = False
+        report.error = (
+            "cue block near line %d could not be parsed; original kept" % result.unparsed_at[0]
+        )
         return report
 
     new_bytes = result.text.encode("utf-8")

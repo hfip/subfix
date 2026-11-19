@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "subfix"
-version = "0.1.0"
+version = "0.1.1"
 description = "Fix broken Arabic subtitles in one command: encoding, timing, RTL and ad lines."
 readme = "README.md"
 requires-python = ">=3.9"

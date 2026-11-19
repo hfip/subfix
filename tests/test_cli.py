@@ -90,3 +90,18 @@ def test_cli_shift_option(tmp_path):
 def test_cli_bad_shift_exits_two(tmp_path):
     srt = write_srt(tmp_path / "movie.srt")
     assert main(["--shift", "abc", str(srt)]) == 2
+
+
+def test_cli_refuses_file_with_unparsed_block(tmp_path):
+    path = tmp_path / "broken.srt"
+    original = "1\n00:00:01,000 --> 00:00:03,000\nمرحبا\n\n2\n00:00:04,000 -> 00:00:06,000\nثاني\n"
+    path.write_text(original, encoding="utf-8")
+    assert main([str(path)]) == 2
+    assert path.read_text(encoding="utf-8") == original
+
+
+def test_cli_keeps_five_digit_fractions(tmp_path):
+    path = tmp_path / "odd.srt"
+    path.write_text("1\n00:00:01,12345 --> 00:00:03,000\nمرحبا\n", encoding="utf-8")
+    assert main([str(path)]) == 0
+    assert "00:00:01,123 -->" in path.read_text(encoding="utf-8")

@@ -156,3 +156,26 @@ def test_fix_text_returns_empty_result_for_non_srt():
     result = fix_text("hello")
     assert result.cues_before == 0
     assert result.text == ""
+
+
+def test_five_digit_fraction_is_accepted():
+    content = make_cue(1, "00:00:04,12345", "00:00:06,000", "مرحبا")
+    result = fix_text(content)
+    assert result.cues_before == 1
+    assert result.unparsed == 0
+    assert result.text.startswith("1\n00:00:04,123 -->")
+
+
+def test_unparsed_cue_block_is_reported():
+    content = (
+        make_cue(1, "00:00:01,000", "00:00:03,000", "مرحبا")
+        + "\n\n"
+        + make_cue(2, "00:00:04,000", "00:00:06,000", "سطر ثاني").replace("-->", "->")
+    )
+    result = fix_text(content)
+    assert result.unparsed == 1
+    assert result.unparsed_at == [5]
+
+
+def test_parse_srt_ignores_blocks_without_arrows():
+    assert parse_srt("just prose\nwithout timings") == []

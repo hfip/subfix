@@ -112,6 +112,9 @@ Exit codes: `0` success, `1` changes needed with `--check`, `2` error.
 - Every modified file gets a `.srt.bak` backup next to it (disable with `--no-backup`).
 - `--dry-run` writes nothing.
 - Files with no parseable cues are left untouched and reported as failed.
+- **Cue blocks it cannot parse are never dropped.** A block with a broken arrow (`->`)
+  or an impossible timestamp makes SubFix refuse the whole file, report the line, and
+  keep the original.
 - An operation that would remove **every** cue is refused; the original is kept.
 - Everything runs locally. There is no network code in this package.
 

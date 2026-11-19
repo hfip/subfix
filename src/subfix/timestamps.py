@@ -5,12 +5,12 @@ from __future__ import annotations
 import re
 from typing import Optional, Tuple
 
-TIME_RE = re.compile(r"(?P<h>\d{1,3}):(?P<m>\d{1,2}):(?P<s>\d{1,2})[,.](?P<frac>\d{1,4})")
+TIME_RE = re.compile(r"(?P<h>\d{1,3}):(?P<m>\d{1,2}):(?P<s>\d{1,2})[,.](?P<frac>\d{1,9})")
 
 CUE_RE = re.compile(
-    r"^(?P<a>\d{1,3}:\d{1,2}:\d{1,2}[,.]\d{1,4})"
+    r"^(?P<a>\d{1,3}:\d{1,2}:\d{1,2}[,.]\d{1,9})"
     r"\s*-->\s*"
-    r"(?P<b>\d{1,3}:\d{1,2}:\d{1,2}[,.]\d{1,4})"
+    r"(?P<b>\d{1,3}:\d{1,2}:\d{1,2}[,.]\d{1,9})"
     r"(?P<rest>\s.*)?$"
 )
 
