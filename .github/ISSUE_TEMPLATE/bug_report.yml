@@ -1,0 +1,50 @@
+name: Bug report
+description: SubFix made something worse, or refused to fix a file
+title: "[bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. The fastest way to fix a subtitle bug is a real file.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect, and what did SubFix produce instead?
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Command you ran
+      render: shell
+      placeholder: subfix -r ~/Movies/Subs
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: SubFix output
+      description: Paste the terminal output, including the summary line.
+      render: shell
+  - type: input
+    id: version
+    attributes:
+      label: SubFix version
+      description: Output of `subfix --version`
+      placeholder: subfix 0.1.0
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: OS and Python version
+      placeholder: macOS 15 / Python 3.12
+  - type: textarea
+    id: sample
+    attributes:
+      label: Sample subtitle
+      description: |
+        Attach the smallest .srt that reproduces the problem (drag the file here).
+        Redact anything you do not want public, but keep the broken bytes intact.
