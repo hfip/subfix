@@ -120,6 +120,8 @@ subfix -r ~/Movies/Subs
 
 </div>
 
+Part of the [Arabic dev tools](https://github.com/hfip/arabic-dev-tools) collection.
+
 ## License
 
 MIT. See [LICENSE](LICENSE).
